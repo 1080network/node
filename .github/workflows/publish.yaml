@@ -1,0 +1,42 @@
+name: Publish packages
+
+# Publishes @1080network/mica-common, mica-issuer and mica-acceptor to GitHub Packages when a release is published.
+# The release tag is the version, for example v2.0.0-pre0.
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@1080network"
+      - name: Check the release tag matches the package version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for p in common issuer acceptor; do
+            PKG_VERSION=$(node -p "require('./packages/$p/package.json').version")
+            if [ "$VERSION" != "$PKG_VERSION" ]; then
+              echo "Release tag $GITHUB_REF_NAME does not match packages/$p version $PKG_VERSION" >&2
+              exit 1
+            fi
+          done
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Publish (common first; the role packages depend on it)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          TAG=latest
+          case "$VERSION" in *-*) TAG=next ;; esac   # pre-releases are not "latest"
+          for p in common issuer acceptor; do npm publish -w "packages/$p" --tag "$TAG"; done

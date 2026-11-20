@@ -1,0 +1,14 @@
+{
+  "name": "mica-node-sdk",
+  "private": true,
+  "description": "Mica network SDK for Node.js and TypeScript (workspace root; see packages/)",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "npm run build -w packages/common && npm run build -w packages/issuer -w packages/acceptor",
+    "test": "npm test -w packages/common"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
